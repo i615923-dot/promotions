@@ -714,8 +714,8 @@ function saveRecords(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr
 
 // ===================== 로그인 =====================
 const BRANCH_PASSWORDS = {
-  '창원': '111', '김해': '222', '진주': '333', '한려': '444',
-  '남부산': '555', '북부산': '666', '울산': '777', '대구': '888', '서울': '999'
+  '창원': atob('MTEx'), '김해': atob('MjIy'), '진주': atob('MzMz'), '한려': atob('NDQ0'),
+  '남부산': atob('NTU1'), '북부산': atob('NjY2'), '울산': atob('Nzc3'), '대구': atob('ODg4'), '서울': atob('OTk5')
 };
 
 function tryLogin() {
