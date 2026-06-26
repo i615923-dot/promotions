@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>판촉물 불출 관리</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; color: #222; font-size: 14px; }
+
+  /* 헤더 */
+  .header { background: #1a3a5c; color: white; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  .branch-badge { background: #f0a500; color: #1a1a1a; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+
+  /* 탭 */
+  .tabs { display: flex; background: #fff; border-bottom: 2px solid #dde3ec; padding: 0 24px; }
+  .tab { padding: 12px 20px; cursor: pointer; font-weight: 600; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+  .tab.active { color: #1a3a5c; border-bottom-color: #1a3a5c; }
+
+  /* 컨테이너 */
+  .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* 카드 */
+  .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .card-title { font-size: 13px; font-weight: 700; color: #1a3a5c; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+
+  /* 폼 그리드 */
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .radio-group { flex-direction: column; }
+    .radio-label { width: 100%; justify-content: center; }
+    .filter-section { flex-direction: column; align-items: stretch; }
+    .filter-section input, .filter-section select { width: 100%; }
+    .period-tabs { justify-content: center; }
+    .add-form { grid-template-columns: 1fr 1fr; }
+    table { font-size: 11px; }
+    th, td { padding: 6px 6px; }
+    .container { padding: 10px; }
+    .card { padding: 14px; }
+    .tabs { overflow-x: auto; white-space: nowrap; }
+    .tab { padding: 10px 14px; font-size: 13px; }
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+  .form-group input, .form-group select { border: 1px solid #ccd3de; border-radius: 5px; padding: 8px 10px; font-size: 14px; font-family: inherit; outline: none; transition: border 0.15s; }
+  .form-group input:focus, .form-group select:focus { border-color: #1a3a5c; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group.half { grid-column: span 2; }
+
+  /* 필터 배지 */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 12px; color: #666; font-weight: 600; }
+  .badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .badge-all { background: #e8edf5; color: #1a3a5c; }
+  .badge-all.active { background: #1a3a5c; color: white; }
+  .badge-high { background: #fff0e0; color: #c06000; }
+  .badge-high.active { background: #f0a500; color: white; }
+  .badge-mid { background: #e8f4e8; color: #2a7a2a; }
+  .badge-mid.active { background: #2a7a2a; color: white; }
+  .badge-low { background: #f0f0f0; color: #555; }
+  .badge-low.active { background: #888; color: white; }
+
+  /* 품목 선택 */
+  .product-search { width: 100%; border: 1px solid #ccd3de; border-radius: 5px; padding: 8px 10px; font-size: 14px; font-family: inherit; outline: none; margin-bottom: 8px; }
+  .product-search:focus { border-color: #1a3a5c; }
+  .product-list { max-height: 200px; overflow-y: auto; border: 1px solid #ccd3de; border-radius: 5px; }
+  .product-item { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f0f0f0; transition: background 0.1s; }
+  .product-item:last-child { border-bottom: none; }
+  .product-item:hover { background: #f5f8ff; }
+  .product-item.excluded { color: #bbb; cursor: not-allowed; background: #fafafa; }
+  .product-item.excluded:hover { background: #fafafa; }
+  .freq-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .freq-상 { background: #f0a500; }
+  .freq-중 { background: #2a7a2a; }
+  .freq-하 { background: #aaa; }
+  .excluded-tag { font-size: 10px; background: #eee; color: #999; padding: 1px 5px; border-radius: 3px; margin-left: auto; }
+  .product-code { font-size: 11px; color: #999; margin-left: auto; }
+
+  /* 선택된 품목 */
+  .selected-product { background: #f0f5ff; border: 1px solid #b0c4e8; border-radius: 5px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-weight: 600; color: #1a3a5c; }
+  .selected-product .code { font-size: 11px; color: #888; font-weight: 400; }
+  .clear-btn { margin-left: auto; background: none; border: none; color: #999; cursor: pointer; font-size: 16px; padding: 0 4px; }
+
+  /* 버튼 */
+  .btn { padding: 9px 20px; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.15s; }
+  .btn-primary { background: #1a3a5c; color: white; }
+  .btn-primary:hover { background: #0f2540; }
+  .btn-success { background: #2a7a2a; color: white; }
+  .btn-success:hover { background: #1d5a1d; }
+  .btn-warning { background: #f0a500; color: #1a1a1a; }
+  .btn-warning:hover { background: #d08f00; }
+  .btn-danger { background: #c0392b; color: white; font-size: 12px; padding: 5px 10px; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+
+  /* 출고구분 라디오 */
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-label { display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 6px 12px; border: 2px solid #dde3ec; border-radius: 5px; font-size: 13px; transition: all 0.15s; }
+  .radio-label:hover { border-color: #1a3a5c; }
+  .radio-label input { display: none; }
+  .radio-label.selected { border-color: #1a3a5c; background: #f0f5ff; color: #1a3a5c; font-weight: 600; }
+
+  /* 테이블 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: #1a3a5c; color: white; padding: 9px 10px; text-align: left; font-size: 12px; white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  tr:hover td { background: #f8faff; }
+  .freq-tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag-상 { background: #fff0e0; color: #c06000; }
+  .tag-중 { background: #e8f4e8; color: #2a7a2a; }
+  .tag-하 { background: #f0f0f0; color: #666; }
+  .cat-tag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; background: #e8edf5; color: #1a3a5c; }
+
+  /* 필터 섹션 */
+  .filter-section { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .filter-section input, .filter-section select { border: 1px solid #ccd3de; border-radius: 5px; padding: 7px 10px; font-size: 13px; font-family: inherit; outline: none; }
+  .filter-section input:focus, .filter-section select:focus { border-color: #1a3a5c; }
+  .count-info { font-size: 12px; color: #888; margin-left: auto; }
+
+  /* 알림 */
+  .alert { padding: 10px 14px; border-radius: 5px; font-size: 13px; margin-bottom: 12px; }
+  .alert-success { background: #e8f4e8; color: #1a5a1a; border: 1px solid #b8d8b8; }
+  .alert-error { background: #fde8e8; color: #8b0000; border: 1px solid #f5b8b8; }
+
+  /* 출력 영역 */
+  .print-section { display: none; }
+  @media print {
+    body { background: white; }
+    .header, .tabs, .filter-section, .btn-row, .no-print { display: none !important; }
+    .print-section { display: block !important; }
+    .print-header { text-align: center; margin-bottom: 20px; }
+    .print-header h2 { font-size: 18px; }
+    .print-header p { font-size: 13px; color: #666; }
+    table { font-size: 12px; }
+    th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .approval-box { display: flex !important; }
+  }
+  .approval-box {
+    display: none;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+  }
+  .approval-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    width: 225px;
+    table-layout: fixed;
+  }
+  .approval-table td {
+    border: 1px solid #333;
+    text-align: center;
+    padding: 0;
+    width: 75px;
+    font-size: 11px;
+    font-weight: 700;
+    height: 22px;
+    overflow: hidden;
+  }
+  .approval-table .approval-body {
+    height: 60px;
+    font-weight: 400;
+  }
+
+  /* 품목 관리 */
+  .add-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+  .add-form input, .add-form select { border: 1px solid #ccd3de; border-radius: 5px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
+  
+  /* 지점 선택 화면 */
+  .branch-select-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f0f2f5; }
+  .branch-select-box { background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 480px; }
+  .branch-select-box h2 { text-align: center; color: #1a3a5c; font-size: 20px; margin-bottom: 8px; }
+  .branch-select-box p { text-align: center; color: #888; font-size: 13px; margin-bottom: 28px; }
+  .branch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .branch-btn { padding: 16px 10px; border: 2px solid #dde3ec; border-radius: 8px; background: white; cursor: pointer; font-size: 15px; font-weight: 700; color: #1a3a5c; font-family: inherit; transition: all 0.15s; }
+  .branch-btn:hover { border-color: #1a3a5c; background: #f0f5ff; }
+  .logo-area { margin-bottom: 28px; text-align: center; }
+  .logo-area span { font-size: 32px; }
+  .logo-area h1 { color: #1a3a5c; font-size: 22px; margin-top: 8px; }
+
+  /* 주간/월간 선택 */
+  .period-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .period-tab { padding: 6px 16px; border: 2px solid #dde3ec; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; color: #888; background: white; font-family: inherit; transition: all 0.15s; }
+  .period-tab.active { border-color: #1a3a5c; color: #1a3a5c; background: #f0f5ff; }
+
+  /* ERP 복사 영역 */
+  .erp-table-wrap { overflow-x: auto; }
+  .copy-hint { font-size: 12px; color: #888; margin-bottom: 8px; }
+  #erpTable { border-collapse: collapse; min-width: 900px; }
+  #erpTable th { background: #2c5f8a; color: white; padding: 7px 10px; font-size: 12px; }
+  #erpTable td { border: 1px solid #ddd; padding: 6px 10px; font-size: 12px; }
+
+  .empty-state { text-align: center; padding: 40px; color: #bbb; font-size: 14px; }
+  .manager-tag { display: inline-flex; align-items: center; gap: 5px; background: #1a3a5c; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 3px; cursor: default; }
+  .manager-tag .tag-remove { cursor: pointer; color: #aac4e8; font-size: 14px; margin-left: 2px; }
+  .manager-tag .tag-remove:hover { color: white; }
+  .saved-name { display: inline-block; padding: 4px 10px; border: 1px solid #ccd3de; border-radius: 20px; font-size: 12px; color: #1a3a5c; cursor: pointer; margin: 2px; background: white; transition: all 0.15s; }
+  .saved-name:hover { background: #1a3a5c; color: white; border-color: #1a3a5c; }
+  .cart-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #e0e6ef; border-radius: 6px; margin-bottom: 6px; background: #f8faff; }
+  .cart-item-name { flex: 1; font-size: 13px; font-weight: 600; color: #1a3a5c; }
+  .cart-item-code { font-size: 11px; color: #aaa; }
+  .cart-qty { width: 70px; border: 1px solid #ccd3de; border-radius: 5px; padding: 5px 8px; font-size: 14px; text-align: center; }
+  .cart-remove { background: none; border: none; color: #ccc; cursor: pointer; font-size: 18px; padding: 0 4px; }
+  .cart-remove:hover { color: #c0392b; }
+</style>
+</head>
+<body>
+
+<!-- 지점 선택 화면 -->
+<div id="branchScreen" class="branch-select-screen">
+  <div class="branch-select-box">
+    <div class="logo-area">
+      <span>📦</span>
+      <h1>판촉물 불출 관리</h1>
+    </div>
+    <h2>지점 로그인</h2>
+    <p>지점명과 비밀번호를 입력하세요</p>
+    <div id="loginError" style="display:none; color:#c0392b; font-size:13px; text-align:center; margin-bottom:10px; background:#fde8e8; padding:8px; border-radius:5px;"></div>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">지점명</label>
+        <input type="text" id="loginBranch" placeholder="예: 창원" style="width:100%; border:1px solid #ccd3de; border-radius:5px; padding:10px 12px; font-size:15px; font-family:inherit; outline:none;" onkeydown="if(event.key==='Enter') document.getElementById('loginPw').focus()">
+      </div>
+      <div>
+        <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">비밀번호</label>
+        <input type="password" id="loginPw" placeholder="비밀번호 입력" style="width:100%; border:1px solid #ccd3de; border-radius:5px; padding:10px 12px; font-size:15px; font-family:inherit; outline:none;" onkeydown="if(event.key==='Enter') tryLogin()">
+      </div>
+      <button onclick="tryLogin()" style="background:#1a3a5c; color:white; border:none; border-radius:5px; padding:12px; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">입장</button>
+    </div>
+    <p style="text-align:center; font-size:11px; color:#bbb; margin-top:16px;">창원 / 김해 / 진주 / 한려 / 남부산 / 북부산 / 울산 / 대구 / 서울</p>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="mainApp" style="display:none;">
+  <div class="header">
+    <h1>📦 판촉물 불출 관리</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span class="branch-badge" id="branchLabel"></span>
+      <button class="btn btn-sm" onclick="changeBranch()" style="background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4);">지점변경</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('input')">불출 입력</div>
+    <div class="tab" onclick="switchTab('list')">불출 내역</div>
+    <div class="tab" onclick="switchTab('erp')">ERP 내보내기</div>
+    <div class="tab" onclick="switchTab('products')">품목 관리</div>
+  </div>
+
+  <div class="container">
+
+    <!-- 불출 입력 패널 -->
+    <div id="panel-input" class="panel active">
+      <div id="alertBox" style="display:none;"></div>
+      <div class="card">
+        <div class="card-title">불출 정보 입력</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>날짜 *</label>
+            <input type="date" id="inDate">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>담당자명 * <span style="font-size:11px; color:#888; font-weight:400;">최대 20명, 이름 입력 후 Enter 또는 + 버튼</span></label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="inManagerInput" placeholder="이름 입력 후 Enter" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addManagerTag();}">
+              <button type="button" onclick="addManagerTag()" style="padding:8px 14px; background:#1a3a5c; color:white; border:none; border-radius:5px; cursor:pointer; font-size:14px; font-weight:600;">+</button>
+            </div>
+            <div id="managerTags" style="margin-top:6px; min-height:28px;"></div>
+            <div id="savedNames" style="margin-top:6px;"></div>
+          </div>
+          <div class="form-group">
+            <label>거래선명(상권명) *</label>
+            <input type="text" id="inClient" placeholder="거래선 또는 상권명">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:8px;">판촉물출고구분 * (필수 선택)</label>
+          <div class="radio-group" id="outTypeGroup">
+            <label class="radio-label" onclick="selectOutType(this, '1차거래처')"><input type="radio" name="outType" value="1차거래처">1차거래처</label>
+            <label class="radio-label" onclick="selectOutType(this, '2차거래처')"><input type="radio" name="outType" value="2차거래처">2차거래처</label>
+            <label class="radio-label" onclick="selectOutType(this, '대소비자')"><input type="radio" name="outType" value="대소비자">대소비자</label>
+            <label class="radio-label" onclick="selectOutType(this, '소매')"><input type="radio" name="outType" value="소매">소매</label>
+            <label class="radio-label" onclick="selectOutType(this, '기타')"><input type="radio" name="outType" value="기타">기타</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">품목 선택</div>
+        <div class="filter-row">
+          <span class="filter-label">사용빈도:</span>
+          <span class="badge badge-all active" onclick="setFreqFilter('전체', this)">전체</span>
+          <span class="badge badge-high" onclick="setFreqFilter('상', this)">상</span>
+          <span class="badge badge-mid" onclick="setFreqFilter('중', this)">중</span>
+          <span class="badge badge-low" onclick="setFreqFilter('하', this)">하</span>
+        </div>
+        <input type="text" class="product-search" id="productSearch" placeholder="품목명 또는 품번 검색..." oninput="renderProductList()">
+        <div class="product-list" id="productList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">담을 품목 목록 <span style="font-size:11px; color:#888; font-weight:400;">품목을 위에서 선택하면 아래에 추가됩니다</span></div>
+        <div id="cartList">
+          <div class="empty-state" id="cartEmpty" style="padding:16px;">품목을 선택하세요</div>
+        </div>
+        <div style="margin-top:12px;">
+          <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">비고 (전체 공통)</label>
+          <input type="text" id="inNote" placeholder="특이사항 입력 (선택)" style="width:100%; border:1px solid #ccd3de; border-radius:5px; padding:8px 10px; font-size:14px; font-family:inherit;">
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="clearCart()" style="background:#eee; color:#555;">전체 삭제</button>
+          <button class="btn btn-primary" onclick="addRecord()">+ 일괄 등록</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 불출 내역 패널 -->
+    <div id="panel-list" class="panel">
+      <div class="approval-box">
+        <table class="approval-table">
+          <tr>
+            <td>보고자</td>
+            <td>검토</td>
+            <td>승인</td>
+          </tr>
+          <tr>
+            <td class="approval-body"></td>
+            <td class="approval-body"></td>
+            <td class="approval-body"></td>
+          </tr>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">불출 내역 조회 및 출력</div>
+        <div class="filter-section">
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="setPeriod('all', this)">전체</button>
+            <button class="period-tab" onclick="setPeriod('week', this)">이번 주</button>
+            <button class="period-tab" onclick="setPeriod('month', this)">이번 달</button>
+          </div>
+          <input type="date" id="filterStart" oninput="renderList()" placeholder="시작일">
+          <span style="color:#888; font-size:12px;">~</span>
+          <input type="date" id="filterEnd" oninput="renderList()" placeholder="종료일">
+          <input type="text" id="filterText" oninput="renderList()" placeholder="담당자 / 거래선 / 품목 검색">
+          <span class="count-info" id="listCount"></span>
+          <button class="btn btn-warning btn-sm no-print" onclick="window.print()">🖨 출력</button>
+        </div>
+        <div id="listTableWrap">
+          <div class="empty-state">등록된 내역이 없습니다</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ERP 내보내기 패널 -->
+    <div id="panel-erp" class="panel">
+      <div class="card">
+        <div class="card-title">ERP 붙여넣기용 데이터</div>
+        <div class="filter-section">
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="setErpPeriod('all', this)">전체</button>
+            <button class="period-tab" onclick="setErpPeriod('week', this)">이번 주</button>
+            <button class="period-tab" onclick="setErpPeriod('month', this)">이번 달</button>
+          </div>
+          <input type="date" id="erpFilterStart" oninput="renderErp()">
+          <span style="color:#888; font-size:12px;">~</span>
+          <input type="date" id="erpFilterEnd" oninput="renderErp()">
+          <button class="btn btn-success btn-sm" onclick="copyErpData()">📋 클립보드 복사</button>
+        </div>
+        <p class="copy-hint">※ 아래 데이터를 복사 후 ERP 엑셀에 붙여넣기 하세요. 컬럼 순서: 품명 / 품번 / 규격 / 단위 / 요청수량 / 판촉물출고구분 / 출고구분 / 기준단위 / 기준단위수량 / LotNo / 특이사항</p>
+        <div class="erp-table-wrap">
+          <table id="erpTable">
+            <thead>
+              <tr>
+                <th>품명</th><th>품번</th><th>규격</th><th>단위</th><th>요청수량</th>
+                <th>판촉물출고구분</th><th>출고구분</th><th>기준단위</th><th>기준단위수량</th><th>LotNo</th><th>특이사항</th>
+              </tr>
+            </thead>
+            <tbody id="erpBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 품목 관리 패널 -->
+    <div id="panel-products" class="panel">
+      <div class="card">
+        <div class="card-title">품목 추가</div>
+        <div class="add-form">
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">품명 *</label>
+            <input type="text" id="newName" placeholder="품목명">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">품번</label>
+            <input type="text" id="newCode" placeholder="PI000000">
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">분류</label>
+            <select id="newCat">
+              <option value="수시">수시</option>
+              <option value="정기">정기</option>
+              <option value="특별">특별</option>
+              <option value="홍보물">홍보물</option>
+              <option value="제외">제외</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px; font-weight:600; color:#555; display:block; margin-bottom:5px;">사용빈도</label>
+            <select id="newFreq">
+              <option value="상">상</option>
+              <option value="중">중</option>
+              <option value="하">하</option>
+            </select>
+          </div>
+          <div style="align-self:end;">
+            <button class="btn btn-primary" onclick="addProduct()">추가</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">전체 품목 목록</div>
+        <div class="filter-section">
+          <input type="text" id="prodSearch" oninput="renderProductMgmt()" placeholder="품목명 검색">
+          <select id="prodCatFilter" onchange="renderProductMgmt()">
+            <option value="">전체 분류</option>
+            <option value="수시">수시</option>
+            <option value="정기">정기</option>
+            <option value="특별">특별</option>
+            <option value="홍보물">홍보물</option>
+            <option value="제외">제외</option>
+          </select>
+          <span class="count-info" id="prodCount"></span>
+        </div>
+        <div id="productMgmtTable"></div>
+      </div>
+    </div>
+
+  </div><!-- /container -->
+</div><!-- /mainApp -->
+
+<script>
+// ===================== 데이터 =====================
+const STORAGE_KEY = 'promotionRecords_v2';
+const PRODUCTS_KEY = 'promotionProducts_v2';
+
+const DEFAULT_PRODUCTS = [
+  {cat:'홍보물',freq:'중',name:'깔끔한 좋은데이 포스터',code:'PI000011'},
+  {cat:'홍보물',freq:'중',name:'정기홍보물 포스터(가을국화)',code:'PI000013'},
+  {cat:'홍보물',freq:'중',name:'국화 포스터(1분기)',code:'PI000014'},
+  {cat:'홍보물',freq:'중',name:'깔라만시 포스터',code:'PI000015'},
+  {cat:'홍보물',freq:'중',name:'정기홍보물 포스터(매실마을)',code:'PI000021'},
+  {cat:'홍보물',freq:'중',name:'깔끔한 좋은데이 포스터(모델단체)',code:'PI000023'},
+  {cat:'홍보물',freq:'하',name:'청춘 소주 포스터',code:'PI000059'},
+  {cat:'홍보물',freq:'하',name:'정기홍보물 포스터(톡소다)',code:'PI000064'},
+  {cat:'홍보물',freq:'중',name:'화이트 포스터',code:'PI000070'},
+  {cat:'홍보물',freq:'하',name:'라미넥스(국화면좋으리)',code:'PI000071'},
+  {cat:'홍보물',freq:'하',name:'라미넥스(매실마을)',code:'PI000079'},
+  {cat:'홍보물',freq:'하',name:'진짜맜있는 국화 라미넥스',code:'PI000112'},
+  {cat:'홍보물',freq:'중',name:'깔끔한 좋은데이 우드락',code:'PI000125'},
+  {cat:'홍보물',freq:'하',name:'청춘소주 우드락',code:'PI000133'},
+  {cat:'홍보물',freq:'하',name:'우드락 (톡소다)',code:'PI000136'},
+  {cat:'홍보물',freq:'하',name:'우드락 (블루베리)',code:'PI000137'},
+  {cat:'홍보물',freq:'하',name:'우드락 (석류)',code:'PI000138'},
+  {cat:'홍보물',freq:'하',name:'우드락 (복숭아)',code:'PI000139'},
+  {cat:'홍보물',freq:'하',name:'우드락 (파인애플)',code:'PI000140'},
+  {cat:'홍보물',freq:'중',name:'깔끔한 좋은데이 댕글러',code:'PI000148'},
+  {cat:'홍보물',freq:'하',name:'청춘소주 댕글러(홀로그램)',code:'PI000150'},
+  {cat:'홍보물',freq:'하',name:'612led 라이트패널',code:'PI000154'},
+  {cat:'홍보물',freq:'하',name:'A2 라이트패널',code:'PI000155'},
+  {cat:'홍보물',freq:'하',name:'LED 배너',code:'PI000156'},
+  {cat:'홍보물',freq:'하',name:'LED 라이트 패널',code:'PI000157'},
+  {cat:'특별',freq:'하',name:'톡소다 LED광고판',code:'PI000160'},
+  {cat:'특별',freq:'중',name:'좋은데이 핫팩(손난로)',code:'PI000161'},
+  {cat:'수시',freq:'중',name:'진라면(순한맛)',code:'PI000168'},
+  {cat:'수시',freq:'상',name:'진라면(매운맛)',code:'PI000169'},
+  {cat:'정기',freq:'상',name:'물통(동아정밀)',code:'PI000215'},
+  {cat:'수시',freq:'중',name:'물티슈 10매(부일아이에스)',code:'PI000216'},
+  {cat:'제외',freq:'하',name:'볼펜(올댓)',code:'PI000221'},
+  {cat:'제외',freq:'하',name:'청춘소주 그립톡',code:'PI000228'},
+  {cat:'수시',freq:'상',name:'설탕(담금철)',code:'PI000235'},
+  {cat:'특별',freq:'하',name:'시음회컵',code:'PI000238'},
+  {cat:'특별',freq:'중',name:'총알잔',code:'PI000239'},
+  {cat:'특별',freq:'하',name:'좋은데이 종이소주컵',code:'PI000240'},
+  {cat:'수시',freq:'상',name:'오징어해씨볼(20g)',code:'PI000247'},
+  {cat:'수시',freq:'상',name:'오징어커피땅콩(믹스넛15g)',code:'PI000248'},
+  {cat:'수시',freq:'상',name:'옛날과자',code:'PI000252'},
+  {cat:'수시',freq:'하',name:'비타500 젤리',code:'PI000266'},
+  {cat:'수시',freq:'중',name:'컨디션 스틱(숙취해소)-컨디션맛',code:'PI000267'},
+  {cat:'수시',freq:'중',name:'컨디션 스틱(숙취해소)-사과맛',code:'PI000268'},
+  {cat:'수시',freq:'하',name:'헛개꿀물(숙취해소)',code:'PI000269'},
+  {cat:'수시',freq:'하',name:'용의주도(숙취해소)',code:'PI000270'},
+  {cat:'수시',freq:'하',name:'간애한방(숙취해소)',code:'PI000271'},
+  {cat:'수시',freq:'하',name:'간애한방포(숙취해소)',code:'PI000272'},
+  {cat:'수시',freq:'하',name:'홍삼꿀물(숙취해소)',code:'PI000273'},
+  {cat:'수시',freq:'상',name:'청춘케어(숙취해소)',code:'PI000274'},
+  {cat:'수시',freq:'하',name:'술이술술(숙취해소)',code:'PI000275'},
+  {cat:'수시',freq:'하',name:'활력헛개스틱(숙취해소)',code:'PI000276'},
+  {cat:'수시',freq:'하',name:'칼로리컷팅제(BIB코리아)',code:'PI000277'},
+  {cat:'수시',freq:'하',name:'슬간생(숙취해소)',code:'PI000278'},
+  {cat:'수시',freq:'하',name:'컨디션(숙취해소)',code:'PI000279'},
+  {cat:'수시',freq:'하',name:'컨디션CEO(숙취해소)',code:'PI000280'},
+  {cat:'수시',freq:'하',name:'컨디션 환(숙취해소)',code:'PI000281'},
+  {cat:'수시',freq:'하',name:'토닉워터',code:'PI000293'},
+  {cat:'수시',freq:'중',name:'초코에몽',code:'PI000305'},
+  {cat:'정기',freq:'상',name:'좋은데이 앞치마(홀서버용)',code:'PI000314'},
+  {cat:'정기',freq:'상',name:'좋은데이 앞치마(손님용)',code:'PI000315'},
+  {cat:'정기',freq:'하',name:'좋은데이 앞치마(횟집용)',code:'PI000316'},
+  {cat:'특별',freq:'중',name:'좋은데이 2본입 케이스',code:'PI000365'},
+  {cat:'특별',freq:'중',name:'좋은데이 2본입 비닐(포리백)',code:'PI000366'},
+  {cat:'특별',freq:'하',name:'톡소다 2본입',code:'PI000367'},
+  {cat:'특별',freq:'하',name:'좋은데이 2본입 비닐봉지',code:'PI000368'},
+  {cat:'특별',freq:'하',name:'좋은데이 리뉴얼 2본입 비닐',code:'PI000369'},
+  {cat:'특별',freq:'하',name:'딱 좋은데이 2본입 케이스',code:'PI000370'},
+  {cat:'특별',freq:'하',name:'딱좋은데이 6본입 케이스',code:'PI000371'},
+  {cat:'특별',freq:'하',name:'테이블매트',code:'PI000372'},
+  {cat:'특별',freq:'하',name:'테이블 매트(창원)',code:'PI000373'},
+  {cat:'특별',freq:'하',name:'테이블 매트(부산)',code:'PI000374'},
+  {cat:'특별',freq:'하',name:'테이블 매트(울산)',code:'PI000375'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 포스터(사과,파인)',code:'PI000387'},
+  {cat:'수시',freq:'하',name:'간편한(숙취해소포)',code:'PI000388'},
+  {cat:'수시',freq:'하',name:'일화배도라지',code:'PI000389'},
+  {cat:'수시',freq:'하',name:'일화헛개꿀물',code:'PI000390'},
+  {cat:'정기',freq:'하',name:'손님용 앞치마(청춘)',code:'PI000391'},
+  {cat:'정기',freq:'하',name:'청춘 앞치마(홀서버용)',code:'PI000392'},
+  {cat:'수시',freq:'상',name:'좋은데이 마이라벨',code:'PI000393'},
+  {cat:'수시',freq:'하',name:'없었던일로(숙취해소병)',code:'PI000394'},
+  {cat:'홍보물',freq:'중',name:'톡시리즈 댕글러',code:'PI000397'},
+  {cat:'홍보물',freq:'중',name:'톡시리즈 포스터(톡시리즈)',code:'PI000399'},
+  {cat:'홍보물',freq:'하',name:'댕글러(나를따르라)',code:'PI000400'},
+  {cat:'홍보물',freq:'하',name:'댕글러(지역경제)',code:'PI000401'},
+  {cat:'수시',freq:'하',name:'쿨피스톡',code:'PI000408'},
+  {cat:'수시',freq:'하',name:'구미젤리',code:'PI000413'},
+  {cat:'수시',freq:'하',name:'알토닉',code:'PI000415'},
+  {cat:'홍보물',freq:'중',name:'톡시리즈 우드락',code:'PI000416'},
+  {cat:'특별',freq:'하',name:'소주잔-하기',code:'PI000241'},
+  {cat:'특별',freq:'하',name:'소주잔캔들',code:'PI000336'},
+  {cat:'수시',freq:'상',name:'헛개밸런스',code:'PI000420'},
+  {cat:'특별',freq:'중',name:'비타500캔',code:'PI000421'},
+  {cat:'홍보물',freq:'중',name:'라미넥스(좋은데이)',code:'PI000427'},
+  {cat:'특별',freq:'하',name:'아이스팩',code:'PI000428'},
+  {cat:'홍보물',freq:'하',name:'출시안내장(톡시리즈)',code:'PI000429'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 X배너',code:'PI000434'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 테이블텐트A(330원)',code:'PI000435'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 테이블텐트B(100원)',code:'PI000436'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 미니X배너',code:'PI000437'},
+  {cat:'홍보물',freq:'하',name:'좋은데이 포스터(아무거나)',code:'PI000438'},
+  {cat:'특별',freq:'하',name:'톡시리즈 아이스버킷',code:'PI000439'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 클립보드+시트지',code:'PI000440'},
+  {cat:'특별',freq:'하',name:'2본입 비닐',code:'PI000441'},
+  {cat:'홍보물',freq:'하',name:'톡시리즈 2본입 안내장',code:'PI000442'},
+  {cat:'홍보물',freq:'하',name:'가을국화 끈넥텍',code:'PI000443'},
+  {cat:'수시',freq:'하',name:'대용량 물티슈 (100매)',code:'PI000444'},
+  {cat:'특별',freq:'하',name:'좋은데이 스프레이잔',code:'PI000445'},
+  {cat:'홍보물',freq:'중',name:'라미넥스(가을국화)',code:'PI000446'},
+  {cat:'홍보물',freq:'중',name:'좋은데이 가격표(유통)',code:'PI000447'},
+  {cat:'홍보물',freq:'중',name:'톡시리즈 가격표(유통)',code:'PI000448'},
+  {cat:'홍보물',freq:'중',name:'좋은데이 띠지(유통)',code:'PI000449'},
+  {cat:'특별',freq:'하',name:'투명지UV',code:'PI000451'},
+  {cat:'수시',freq:'중',name:'매직클리너(소)',code:'PI000452'},
+  {cat:'수시',freq:'중',name:'매직클리너(대)',code:'PI000453'},
+  {cat:'수시',freq:'하',name:'청춘케어(숙취해소환)',code:'PI000454'},
+  {cat:'수시',freq:'하',name:'비타500 프레쉬',code:'PI000455'},
+  {cat:'홍보물',freq:'하',name:'미국 우드락',code:'PI000458'},
+  {cat:'홍보물',freq:'하',name:'미국 댕글러',code:'PI000459'},
+  {cat:'홍보물',freq:'하',name:'미국 포스터',code:'PI000460'},
+  {cat:'특별',freq:'하',name:'미니새우깡',code:'PI000461'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 포스터',code:'PI000462'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 우드락',code:'PI000463'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 댕글러',code:'PI000464'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 출시안내장 A4 양면A',code:'PI000465'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 출시안내장 A4 양면B',code:'PI000466'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 출시안내장 A5 단면',code:'PI000467'},
+  {cat:'정기',freq:'하',name:'부산갈매기 홀 앞치마',code:'PI000468'},
+  {cat:'특별',freq:'하',name:'소주잔-더기',code:'PI000242'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기 천장형 홍보물',code:'PI000470'},
+  {cat:'정기',freq:'상',name:'소주잔(좋은데이)',code:'PI000419'},
+  {cat:'수시',freq:'하',name:'없었던일로(보고신약)',code:'PI000476'},
+  {cat:'특별',freq:'중',name:'매실마을/가을국화 전용잔',code:'PI000477'},
+  {cat:'수시',freq:'중',name:'아임파인',code:'PI000478'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기16 우드락',code:'PI000481'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기16 포스터',code:'PI000482'},
+  {cat:'홍보물',freq:'하',name:'부산갈매기16 댕글러',code:'PI000483'},
+  {cat:'수시',freq:'하',name:'부산갈매기16 마이라벨',code:'PI000487'},
+  {cat:'정기',freq:'하',name:'부산갈매기 소주잔',code:'PI000469'},
+  {cat:'특별',freq:'하',name:'톡소다 전용잔',code:'PI000493'},
+  {cat:'특별',freq:'하',name:'비타500 ZERO 스파클링',code:'PI000494'},
+  {cat:'홍보물',freq:'하',name:'테블릿PC홍보물(톡소다)',code:'PI000495'},
+  {cat:'특별',freq:'하',name:'컨디션 스틱(숙취해소)-망고맛',code:'PI000496'},
+  {cat:'특별',freq:'하',name:'흑마늘 진액고',code:'PI000497'},
+  {cat:'특별',freq:'하',name:'톡소다 6본입 케이스',code:'PI000498'},
+  {cat:'수시',freq:'상',name:'피시스낵',code:'PI000499'},
+  {cat:'홍보물',freq:'중',name:'댕글러(톡소다캔)',code:'PI000502'},
+  {cat:'수시',freq:'상',name:'대용량 물티슈',code:'PI000503'},
+  {cat:'홍보물',freq:'중',name:'블루문 포스터',code:'PI000504'},
+  {cat:'홍보물',freq:'하',name:'블루문 배너세트',code:'PI000505'},
+  {cat:'홍보물',freq:'하',name:'블루문 댕글러',code:'PI000506'},
+  {cat:'홍보물',freq:'하',name:'블루문 우드락',code:'PI000507'},
+  {cat:'홍보물',freq:'중',name:'가을국화 댕글러',code:'PI000508'},
+  {cat:'홍보물',freq:'중',name:'매실마을 댕글러',code:'PI000509'},
+  {cat:'특별',freq:'중',name:'블루문 오프너',code:'PI000510'},
+  {cat:'수시',freq:'중',name:'쌀과자',code:'PI000511'},
+  {cat:'수시',freq:'중',name:'코코바이트제로',code:'PI000514'},
+  {cat:'수시',freq:'하',name:'옛날과자(제이케이원)',code:'PI000515'},
+  {cat:'특별',freq:'중',name:'부직포가방',code:'PI000516'},
+  {cat:'특별',freq:'하',name:'상단시트지',code:'PI000517'},
+  {cat:'특별',freq:'하',name:'투명시트지',code:'PI000518'},
+  {cat:'홍보물',freq:'하',name:'리뉴얼 좋은데이 출시안내장 A6',code:'PI000522'},
+  {cat:'홍보물',freq:'하',name:'리뉴얼 좋은데이 출시안내장 A4',code:'PI000523'},
+  {cat:'홍보물',freq:'하',name:'리뉴얼 좋은데이 메뉴판스티커',code:'PI000524'},
+  {cat:'홍보물',freq:'하',name:'출시현수막',code:'PI000525'},
+  {cat:'홍보물',freq:'하',name:'문잡이존스티커',code:'PI000526'},
+  {cat:'홍보물',freq:'하',name:'셀프토커+숫자스티커',code:'PI000527'},
+  {cat:'홍보물',freq:'하',name:'댕글러',code:'PI000528'},
+  {cat:'홍보물',freq:'하',name:'출입문홍보물',code:'PI000529'},
+  {cat:'홍보물',freq:'하',name:'자석보드홍보물',code:'PI000530'},
+  {cat:'특별',freq:'하',name:'오로라잔(단면)',code:'PI000532'},
+  {cat:'특별',freq:'하',name:'언박싱나이프',code:'PI000534'},
+  // 제외 품목들
+  {cat:'제외',freq:'하',name:'소주잔-해외(톡시리즈/플라스틱)',code:'PI000474'},
+  {cat:'제외',freq:'하',name:'소주잔-해외(톡시리즈)',code:'PI000417'},
+  {cat:'제외',freq:'하',name:'위생장갑',code:'PI000318'},
+  {cat:'제외',freq:'하',name:'위생팩',code:'PI000319'},
+  {cat:'제외',freq:'하',name:'행주타올',code:'PI000321'},
+  {cat:'제외',freq:'하',name:'타월',code:'PI000322'},
+  {cat:'제외',freq:'하',name:'핸드크림',code:'PI000351'},
+  {cat:'제외',freq:'하',name:'볼펜(에이스코리아)',code:'PI000398'},
+  {cat:'제외',freq:'하',name:'좋은데이 스툴',code:'PI000414'},
+];
+
+// ===================== 상태 =====================
+let currentBranch = '';
+let selectedProduct = null;
+let freqFilter = '전체';
+let cart = []; // {product, qty}
+let managers = []; // 현재 선택된 담당자 목록
+
+function getSavedNames() {
+  const key = 'savedNames_' + currentBranch;
+  const stored = localStorage.getItem(key);
+  return stored ? JSON.parse(stored) : [];
+}
+function saveName(name) {
+  const key = 'savedNames_' + currentBranch;
+  const names = getSavedNames();
+  if(!names.includes(name)) {
+    names.unshift(name);
+    if(names.length > 30) names.pop();
+    localStorage.setItem(key, JSON.stringify(names));
+  }
+}
+
+function addManagerTag() {
+  const input = document.getElementById('inManagerInput');
+  const raw = input.value.trim();
+  if(!raw) return;
+  // 쉼표로 여러 명 한번에 입력 가능
+  const names = raw.split(/[,，]/).map(n => n.trim()).filter(n => n);
+  names.forEach(name => {
+    if(!managers.includes(name) && managers.length < 20) {
+      managers.push(name);
+    }
+  });
+  input.value = '';
+  renderManagerTags();
+}
+
+function removeManagerTag(name) {
+  managers = managers.filter(m => m !== name);
+  renderManagerTags();
+}
+
+function addSavedName(name) {
+  if(!managers.includes(name) && managers.length < 20) {
+    managers.push(name);
+    renderManagerTags();
+  }
+}
+
+function renderManagerTags() {
+  const wrap = document.getElementById('managerTags');
+  wrap.innerHTML = managers.map(m =>
+    `<span class="manager-tag">${m}<span class="tag-remove" onclick="removeManagerTag('${m}')">✕</span></span>`
+  ).join('');
+  renderSavedNames();
+}
+
+function renderSavedNames() {
+  const wrap = document.getElementById('savedNames');
+  if(!wrap) return;
+  const saved = getSavedNames();
+  if(saved.length === 0) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div style="font-size:11px; color:#aaa; margin-bottom:3px;">이전 담당자:</div>' +
+    saved.map(n => `<span class="saved-name" onclick="addSavedName('${n}')">${n}</span>`).join('');
+}
+let currentPeriod = 'all';
+let erpPeriod = 'all';
+
+function getProducts() {
+  const stored = localStorage.getItem(PRODUCTS_KEY);
+  return stored ? JSON.parse(stored) : [...DEFAULT_PRODUCTS];
+}
+function saveProducts(arr) { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(arr)); }
+
+function getRecords() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+function saveRecords(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+
+// ===================== 로그인 =====================
+const BRANCH_PASSWORDS = {
+  '창원': '111', '김해': '222', '진주': '333', '한려': '444',
+  '남부산': '555', '북부산': '666', '울산': '777', '대구': '888', '서울': '999'
+};
+
+function tryLogin() {
+  const branch = document.getElementById('loginBranch').value.trim();
+  const pw = document.getElementById('loginPw').value;
+  const errBox = document.getElementById('loginError');
+  const validBranches = Object.keys(BRANCH_PASSWORDS);
+  const matched = validBranches.find(b => b === branch);
+  if (!matched) {
+    errBox.style.display = 'block';
+    errBox.textContent = '지점명을 확인하세요. (예: 창원, 김해, 진주...)';
+    return;
+  }
+  if (BRANCH_PASSWORDS[matched] !== pw) {
+    errBox.style.display = 'block';
+    errBox.textContent = '비밀번호가 틀렸습니다.';
+    return;
+  }
+  errBox.style.display = 'none';
+  document.getElementById('loginPw').value = '';
+  document.getElementById('loginBranch').value = '';
+  selectBranch(matched);
+}
+
+// ===================== 지점 선택 =====================
+function selectBranch(name) {
+  currentBranch = name;
+  // localStorage 기록 전부 삭제 (Supabase만 사용)
+  localStorage.removeItem('promotionRecords_v2');
+  document.getElementById('branchScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('branchLabel').textContent = name + ' 지점';
+  // 오늘 날짜 기본값
+  document.getElementById('inDate').value = new Date().toISOString().split('T')[0];
+  managers = [];
+  renderProductList();
+  renderList();
+  renderErp();
+  renderProductMgmt();
+  setTimeout(renderSavedNames, 100);
+}
+
+function changeBranch() {
+  if(!confirm('지점을 변경하시겠습니까?')) return;
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('branchScreen').style.display = 'flex';
+  currentBranch = '';
+}
+
+// ===================== 탭 전환 =====================
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const panels = ['input','list','erp','products'];
+    t.classList.toggle('active', panels[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if(name === 'list') renderList();
+  if(name === 'erp') renderErp();
+  if(name === 'products') renderProductMgmt();
+}
+
+// ===================== 품목 선택 =====================
+function setFreqFilter(freq, el) {
+  freqFilter = freq;
+  document.querySelectorAll('.badge').forEach(b => {
+    b.classList.remove('active');
+  });
+  el.classList.add('active');
+  renderProductList();
+}
+
+function renderProductList() {
+  const search = document.getElementById('productSearch').value.toLowerCase();
+  const products = getProducts();
+  const filtered = products.filter(p => {
+    const matchFreq = freqFilter === '전체' || p.freq === freqFilter;
+    const matchSearch = !search || p.name.toLowerCase().includes(search) || (p.code && p.code.toLowerCase().includes(search));
+    return matchFreq && matchSearch;
+  });
+
+  const list = document.getElementById('productList');
+  if(filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state" style="padding:20px;">검색 결과 없음</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(p => {
+    const excluded = p.cat === '제외';
+    return `<div class="product-item ${excluded ? 'excluded' : ''}" onclick="${excluded ? '' : `selectProduct('${p.code}')`}">
+      <span class="freq-dot freq-${p.freq}"></span>
+      <span>${p.name}</span>
+      <span style="font-size:11px; color:#aaa; margin-left:4px;">[${p.cat}]</span>
+      ${excluded ? '<span class="excluded-tag">제외</span>' : `<span class="product-code">${p.code || ''}</span>`}
+    </div>`;
+  }).join('');
+}
+
+function selectProduct(code) {
+  const products = getProducts();
+  const p = products.find(pr => pr.code === code);
+  if(!p) return;
+  // 이미 담긴 품목이면 수량만 증가
+  const existing = cart.find(c => c.product.code === code);
+  if(existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({ product: p, qty: 1 });
+  }
+  renderCart();
+  // 검색창 초기화
+  document.getElementById('productSearch').value = '';
+  renderProductList();
+}
+
+function clearProduct() {
+  selectedProduct = null;
+}
+
+function renderCart() {
+  const wrap = document.getElementById('cartList');
+  const empty = document.getElementById('cartEmpty');
+  if(cart.length === 0) {
+    empty.style.display = 'block';
+    // 기존 행 제거
+    wrap.querySelectorAll('.cart-item').forEach(el => el.remove());
+    return;
+  }
+  empty.style.display = 'none';
+  wrap.querySelectorAll('.cart-item').forEach(el => el.remove());
+  cart.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.innerHTML = `
+      <span class="freq-dot freq-${item.product.freq}" style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+      <span class="cart-item-name">${item.product.name}</span>
+      <span class="cart-item-code">${item.product.code}</span>
+      <input type="number" class="cart-qty" value="${item.qty}" min="1" onchange="updateCartQty(${i}, this.value)">
+      <button class="cart-remove" onclick="removeCartItem(${i})">✕</button>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+function updateCartQty(idx, val) {
+  const q = parseInt(val);
+  if(q > 0) cart[idx].qty = q;
+}
+
+function removeCartItem(idx) {
+  cart.splice(idx, 1);
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  renderCart();
+}
+
+// ===================== 출고구분 선택 =====================
+let selectedOutType = '';
+function selectOutType(el, val) {
+  selectedOutType = val;
+  document.querySelectorAll('.radio-label').forEach(l => l.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ===================== 불출 등록 =====================
+function addRecord() {
+  const date = document.getElementById('inDate').value;
+  const client = document.getElementById('inClient').value.trim();
+  const note = document.getElementById('inNote').value.trim();
+
+  if(!date) return showAlert('날짜를 입력하세요.', 'error');
+  if(managers.length === 0) return showAlert('담당자명을 입력하세요.', 'error');
+  if(!client) return showAlert('거래선명을 입력하세요.', 'error');
+  if(!selectedOutType) return showAlert('판촉물출고구분을 선택하세요.', 'error');
+  if(cart.length === 0) return showAlert('품목을 하나 이상 선택하세요.', 'error');
+
+  // 담당자별 이름 저장
+  managers.forEach(m => saveName(m));
+
+  const records = getRecords();
+  managers.forEach(manager => {
+    cart.forEach(item => {
+      records.push({
+        id: Date.now() + Math.random(),
+        branch: currentBranch,
+        date, manager, client,
+        outType: selectedOutType,
+        productName: item.product.name,
+        productCode: item.product.code,
+        productCat: item.product.cat,
+        productFreq: item.product.freq,
+        qty: item.qty, note
+      });
+    });
+  });
+  // Supabase 저장
+  const SUPABASE_URL = 'https://wsktpndhlytjbnunbvxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c';
+
+  const payload = [];
+  managers.forEach(mgr => {
+    cart.forEach(item => {
+      payload.push({
+        branch: currentBranch,
+        date,
+        manager: mgr,
+        client,
+        out_type: selectedOutType,
+        product_name: item.product.name,
+        product_code: item.product.code,
+        qty: item.qty, note
+      });
+    });
+  });
+
+  fetch(SUPABASE_URL + '/rest/v1/promotions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(payload)
+  }).then(res => {
+    if(res.ok) {
+      saveRecords(records);
+      const total = managers.length * cart.length;
+      showAlert(`${managers.length}명 × ${cart.length}품목 = 총 ${total}건 등록 완료`, 'success');
+      document.getElementById('inNote').value = '';
+      document.getElementById('productSearch').value = '';
+      cart = [];
+      renderCart();
+      renderProductList();
+      renderList();
+    } else {
+      res.text().then(t => showAlert('저장 오류: ' + t, 'error'));
+    }
+  }).catch(err => showAlert('네트워크 오류: ' + err, 'error'));
+}
+
+function showAlert(msg, type) {
+  const box = document.getElementById('alertBox');
+  box.style.display = 'block';
+  box.className = 'alert alert-' + type;
+  box.textContent = msg;
+  setTimeout(() => { box.style.display = 'none'; }, 3000);
+}
+
+// ===================== 내역 조회 =====================
+function setPeriod(period, el) {
+  currentPeriod = period;
+  document.querySelectorAll('#panel-list .period-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if(period === 'week') {
+    const today = new Date();
+    const day = today.getDay();
+    const mon = new Date(today); mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    document.getElementById('filterStart').value = mon.toISOString().split('T')[0];
+    document.getElementById('filterEnd').value = sun.toISOString().split('T')[0];
+  } else if(period === 'month') {
+    const today = new Date();
+    document.getElementById('filterStart').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+    const last = new Date(today.getFullYear(), today.getMonth()+1, 0);
+    document.getElementById('filterEnd').value = last.toISOString().split('T')[0];
+  } else {
+    document.getElementById('filterStart').value = '';
+    document.getElementById('filterEnd').value = '';
+  }
+  renderList();
+}
+
+function getFilteredRecords(startId, endId) {
+  const start = document.getElementById(startId).value;
+  const end = document.getElementById(endId).value;
+  return getRecords().filter(r => {
+    if(r.branch !== currentBranch) return false;
+    if(start && r.date < start) return false;
+    if(end && r.date > end) return false;
+    return true;
+  });
+}
+
+function buildListTable(records) {
+  const wrap = document.getElementById('listTableWrap');
+  if(records.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">조회된 내역이 없습니다</div>';
+    return;
+  }
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>날짜</th><th>지점</th><th>담당자</th><th>거래선(상권)</th><th>출고구분</th>
+      <th>품목명</th><th>품번</th><th>수량</th><th>비고</th><th class="no-print">삭제</th>
+    </tr></thead>
+    <tbody>
+    ${records.map(r => `<tr>
+      <td>${r.date}</td>
+      <td><span class="cat-tag">${r.branch}</span></td>
+      <td>${r.manager}</td>
+      <td>${r.client}</td>
+      <td>${r.out_type}</td>
+      <td>${r.product_name}</td>
+      <td style="color:#999; font-size:12px;">${r.product_code}</td>
+      <td style="text-align:center; font-weight:600;">${r.qty}</td>
+      <td style="color:#888;">${r.note || ''}</td>
+      <td class="no-print"><button class="btn btn-danger" onclick="deleteRecord(${r.id})">삭제</button></td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderList() {
+  const start = document.getElementById('filterStart').value;
+  const end = document.getElementById('filterEnd').value;
+  const textFilter = document.getElementById('filterText').value.toLowerCase();
+  const wrap = document.getElementById('listTableWrap');
+  wrap.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+
+  const SUPABASE_URL = 'https://wsktpndhlytjbnunbvxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c';
+
+  let url = SUPABASE_URL + '/rest/v1/promotions?order=date.asc,created_at.asc&branch=eq.' + encodeURIComponent(currentBranch);
+  if(start) url += '&date=gte.' + start;
+  if(end) url += '&date=lte.' + end;
+
+  fetch(url, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(r => r.json()).then(records => {
+    let filtered = records;
+    if(textFilter) filtered = records.filter(r =>
+      (r.manager||'').toLowerCase().includes(textFilter) ||
+      (r.client||'').toLowerCase().includes(textFilter) ||
+      (r.product_name||'').toLowerCase().includes(textFilter)
+    );
+    document.getElementById('listCount').textContent = `총 ${filtered.length}건`;
+    buildListTable(filtered);
+  }).catch(err => {
+    wrap.innerHTML = '<div class="empty-state">오류: ' + err + '</div>';
+  });
+}
+
+function deleteRecord(id) {
+  if(!confirm('이 내역을 삭제하시겠습니까?')) return;
+  const SUPABASE_URL = 'https://wsktpndhlytjbnunbvxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c';
+  fetch(SUPABASE_URL + '/rest/v1/promotions?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(() => renderList());
+}
+
+// ===================== ERP 내보내기 =====================
+function setErpPeriod(period, el) {
+  erpPeriod = period;
+  document.querySelectorAll('#panel-erp .period-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if(period === 'week') {
+    const today = new Date();
+    const day = today.getDay();
+    const mon = new Date(today); mon.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    document.getElementById('erpFilterStart').value = mon.toISOString().split('T')[0];
+    document.getElementById('erpFilterEnd').value = sun.toISOString().split('T')[0];
+  } else if(period === 'month') {
+    const today = new Date();
+    document.getElementById('erpFilterStart').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`;
+    const last = new Date(today.getFullYear(), today.getMonth()+1, 0);
+    document.getElementById('erpFilterEnd').value = last.toISOString().split('T')[0];
+  } else {
+    document.getElementById('erpFilterStart').value = '';
+    document.getElementById('erpFilterEnd').value = '';
+  }
+  renderErp();
+}
+
+let erpCache = [];
+
+function renderErp() {
+  const start = document.getElementById('erpFilterStart').value;
+  const end = document.getElementById('erpFilterEnd').value;
+  const tbody = document.getElementById('erpBody');
+  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#bbb; padding:20px;">불러오는 중...</td></tr>';
+
+  let url = 'https://wsktpndhlytjbnunbvxp.supabase.co/rest/v1/promotions?order=date.asc,created_at.asc&branch=eq.' + encodeURIComponent(currentBranch);
+  if(start) url += '&date=gte.' + start;
+  if(end) url += '&date=lte.' + end;
+
+  fetch(url, {
+    headers: { 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c' }
+  }).then(r => r.json()).then(records => {
+    erpCache = records;
+    if(records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#bbb; padding:20px;">데이터 없음</td></tr>';
+      return;
+    }
+    tbody.innerHTML = records.map(r => `<tr>
+      <td>${r.product_name}</td>
+      <td>${r.product_code}</td>
+      <td></td>
+      <td>EA</td>
+      <td>${r.qty}</td>
+      <td>${r.out_type}</td>
+      <td>판촉</td>
+      <td>EA</td>
+      <td>${r.qty}</td>
+      <td></td>
+      <td>${r.note || ''}</td>
+    </tr>`).join('');
+  }).catch(err => {
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:red; padding:20px;">오류: ' + err + '</td></tr>';
+  });
+}
+
+function copyErpData() {
+  if(erpCache.length === 0) { alert('복사할 데이터가 없습니다.'); return; }
+  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', r.note || ''].join('\t'));
+  navigator.clipboard.writeText(rows.join('\n')).then(() => {
+    alert(`${erpCache.length}건 복사 완료!\nERP 엑셀에 붙여넣기(Ctrl+V) 하세요.`);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = rows.join('\n');
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert(`${records.length}건 복사 완료!`);
+  });
+}
+
+// ===================== 품목 관리 =====================
+function addProduct() {
+  const name = document.getElementById('newName').value.trim();
+  const code = document.getElementById('newCode').value.trim();
+  const cat = document.getElementById('newCat').value;
+  const freq = document.getElementById('newFreq').value;
+  if(!name) { alert('품목명을 입력하세요.'); return; }
+  const products = getProducts();
+  products.push({ cat, freq, name, code });
+  saveProducts(products);
+  document.getElementById('newName').value = '';
+  document.getElementById('newCode').value = '';
+  renderProductMgmt();
+  renderProductList();
+  alert('품목이 추가되었습니다.');
+}
+
+function renderProductMgmt() {
+  const search = document.getElementById('prodSearch').value.toLowerCase();
+  const catFilter = document.getElementById('prodCatFilter').value;
+  const products = getProducts();
+  const filtered = products.filter(p => {
+    const matchCat = !catFilter || p.cat === catFilter;
+    const matchSearch = !search || p.name.toLowerCase().includes(search);
+    return matchCat && matchSearch;
+  });
+  document.getElementById('prodCount').textContent = `총 ${filtered.length}개`;
+
+  const wrap = document.getElementById('productMgmtTable');
+  if(filtered.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">해당 품목 없음</div>';
+    return;
+  }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>분류</th><th>사용빈도</th><th>품목명</th><th>품번</th><th class="no-print">변경</th><th class="no-print">삭제</th></tr></thead>
+    <tbody>
+    ${filtered.map((p,i) => {
+      const realIdx = products.indexOf(p);
+      return `<tr>
+        <td><span class="cat-tag">${p.cat}</span></td>
+        <td><span class="freq-tag tag-${p.freq}">${p.freq}</span></td>
+        <td>${p.name}</td>
+        <td style="color:#999; font-size:12px;">${p.code || ''}</td>
+        <td class="no-print">
+          <select onchange="changeProductCat(${realIdx}, this.value)" style="border:1px solid #ddd; border-radius:4px; padding:3px 6px; font-size:12px;">
+            <option ${p.cat==='수시'?'selected':''} value="수시">수시</option>
+            <option ${p.cat==='정기'?'selected':''} value="정기">정기</option>
+            <option ${p.cat==='특별'?'selected':''} value="특별">특별</option>
+            <option ${p.cat==='홍보물'?'selected':''} value="홍보물">홍보물</option>
+            <option ${p.cat==='제외'?'selected':''} value="제외">제외</option>
+          </select>
+        </td>
+        <td class="no-print"><button class="btn btn-danger" onclick="deleteProduct(${realIdx})">삭제</button></td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function changeProductCat(idx, newCat) {
+  const products = getProducts();
+  products[idx].cat = newCat;
+  saveProducts(products);
+  renderProductList();
+}
+
+function deleteProduct(idx) {
+  if(!confirm('이 품목을 삭제하시겠습니까?')) return;
+  const products = getProducts();
+  products.splice(idx, 1);
+  saveProducts(products);
+  renderProductMgmt();
+  renderProductList();
+}
+
+// 초기 렌더
+renderProductList();
+</script>
+</body>
+</html>
