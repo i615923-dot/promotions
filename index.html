@@ -1125,7 +1125,7 @@ function renderErp() {
       <td>EA</td>
       <td>${r.qty}</td>
       <td></td>
-      <td>${r.note || ''}</td>
+      <td>${[r.manager, r.note].filter(Boolean).join(' / ')}</td>
     </tr>`).join('');
   }).catch(err => {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:red; padding:20px;">오류: ' + err + '</td></tr>';
@@ -1134,7 +1134,7 @@ function renderErp() {
 
 function copyErpData() {
   if(erpCache.length === 0) { alert('복사할 데이터가 없습니다.'); return; }
-  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', r.note || ''].join('\t'));
+  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', [r.manager, r.note].filter(Boolean).join(' / ')].join('\t'));
   navigator.clipboard.writeText(rows.join('\n')).then(() => {
     alert(`${erpCache.length}건 복사 완료!\nERP 엑셀에 붙여넣기(Ctrl+V) 하세요.`);
   }).catch(() => {
