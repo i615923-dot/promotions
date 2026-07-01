@@ -371,13 +371,13 @@
           <input type="date" id="erpFilterEnd" oninput="renderErp()">
           <button class="btn btn-success btn-sm" onclick="copyErpData()">📋 클립보드 복사</button>
         </div>
-        <p class="copy-hint">※ 아래 데이터를 복사 후 ERP 엑셀에 붙여넣기 하세요. 컬럼 순서: 품명 / 품번 / 규격 / 단위 / 요청수량 / 판촉물출고구분 / 출고구분 / 기준단위 / 기준단위수량 / LotNo / 특이사항</p>
+        <p class="copy-hint">※ 아래 데이터를 복사 후 ERP 엑셀에 붙여넣기 하세요. 컬럼 순서: 품명 / 품번 / 규격 / 단위 / 요청수량 / 판촉물출고구분 / 출고구분 / 기준단위 / 기준단위수량 / LotNo / 코스트센터 / 특이사항</p>
         <div class="erp-table-wrap">
           <table id="erpTable">
             <thead>
               <tr>
                 <th>품명</th><th>품번</th><th>규격</th><th>단위</th><th>요청수량</th>
-                <th>판촉물출고구분</th><th>출고구분</th><th>기준단위</th><th>기준단위수량</th><th>LotNo</th><th>특이사항</th>
+                <th>판촉물출고구분</th><th>출고구분</th><th>기준단위</th><th>기준단위수량</th><th>LotNo</th><th>코스트센터</th><th>특이사항</th>
               </tr>
             </thead>
             <tbody id="erpBody"></tbody>
@@ -1100,7 +1100,7 @@ function renderErp() {
   const start = document.getElementById('erpFilterStart').value;
   const end = document.getElementById('erpFilterEnd').value;
   const tbody = document.getElementById('erpBody');
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#bbb; padding:20px;">불러오는 중...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:#bbb; padding:20px;">불러오는 중...</td></tr>';
 
   let url = 'https://wsktpndhlytjbnunbvxp.supabase.co/rest/v1/promotions?order=date.asc,created_at.asc&branch=eq.' + encodeURIComponent(currentBranch);
   if(start) url += '&date=gte.' + start;
@@ -1111,7 +1111,7 @@ function renderErp() {
   }).then(r => r.json()).then(records => {
     erpCache = records;
     if(records.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:#bbb; padding:20px;">데이터 없음</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:#bbb; padding:20px;">데이터 없음</td></tr>';
       return;
     }
     tbody.innerHTML = records.map(r => `<tr>
@@ -1125,16 +1125,17 @@ function renderErp() {
       <td>EA</td>
       <td>${r.qty}</td>
       <td></td>
+      <td></td>
       <td>${[r.manager, r.note].filter(Boolean).join(' / ')}</td>
     </tr>`).join('');
   }).catch(err => {
-    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; color:red; padding:20px;">오류: ' + err + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center; color:red; padding:20px;">오류: ' + err + '</td></tr>';
   });
 }
 
 function copyErpData() {
   if(erpCache.length === 0) { alert('복사할 데이터가 없습니다.'); return; }
-  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', [r.manager, r.note].filter(Boolean).join(' / ')].join('\t'));
+  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', '', [r.manager, r.note].filter(Boolean).join(' / ')].join('\t'));
   navigator.clipboard.writeText(rows.join('\n')).then(() => {
     alert(`${erpCache.length}건 복사 완료!\nERP 엑셀에 붙여넣기(Ctrl+V) 하세요.`);
   }).catch(() => {
