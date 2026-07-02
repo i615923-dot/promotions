@@ -349,6 +349,8 @@
           <input type="text" id="filterText" oninput="renderList()" placeholder="담당자 / 거래선 / 품목 검색">
           <span class="count-info" id="listCount"></span>
           <button class="btn btn-warning btn-sm no-print" onclick="window.print()">🖨 출력</button>
+          <button class="btn btn-danger btn-sm no-print" onclick="deleteSelected()" id="btnDeleteSelected" style="display:none;">🗑 선택 삭제</button>
+          <button class="btn btn-sm no-print" onclick="deleteAllFiltered()" style="background:#555; color:white;">🗑 조회분 전체 삭제</button>
         </div>
         <div id="listTableWrap">
           <div class="empty-state">등록된 내역이 없습니다</div>
@@ -1002,19 +1004,25 @@ function getFilteredRecords(startId, endId) {
   });
 }
 
+let currentListRecords = [];
+
 function buildListTable(records) {
+  currentListRecords = records;
   const wrap = document.getElementById('listTableWrap');
   if(records.length === 0) {
     wrap.innerHTML = '<div class="empty-state">조회된 내역이 없습니다</div>';
+    document.getElementById('btnDeleteSelected').style.display = 'none';
     return;
   }
   wrap.innerHTML = `<table>
     <thead><tr>
+      <th class="no-print"><input type="checkbox" id="checkAll" onclick="toggleAllCheck(this)" title="전체 선택"></th>
       <th>날짜</th><th>지점</th><th>담당자</th><th>거래선(상권)</th><th>출고구분</th>
       <th>품목명</th><th>품번</th><th>수량</th><th>비고</th><th class="no-print">삭제</th>
     </tr></thead>
     <tbody>
     ${records.map(r => `<tr>
+      <td class="no-print"><input type="checkbox" class="row-check" value="${r.id}" onchange="updateDeleteBtn()"></td>
       <td>${r.date}</td>
       <td><span class="cat-tag">${r.branch}</span></td>
       <td>${r.manager}</td>
@@ -1028,6 +1036,47 @@ function buildListTable(records) {
     </tr>`).join('')}
     </tbody>
   </table>`;
+}
+
+function toggleAllCheck(el) {
+  document.querySelectorAll('.row-check').forEach(c => c.checked = el.checked);
+  updateDeleteBtn();
+}
+
+function updateDeleteBtn() {
+  const checked = document.querySelectorAll('.row-check:checked').length;
+  const btn = document.getElementById('btnDeleteSelected');
+  btn.style.display = checked > 0 ? 'inline-block' : 'none';
+  btn.textContent = `🗑 선택 삭제 (${checked}건)`;
+}
+
+function deleteSelected() {
+  const ids = [...document.querySelectorAll('.row-check:checked')].map(c => parseInt(c.value));
+  if(ids.length === 0) return;
+  if(!confirm(`선택한 ${ids.length}건을 삭제하시겠습니까?`)) return;
+  const SUPABASE_URL = 'https://wsktpndhlytjbnunbvxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c';
+  // id in (...)
+  const idList = ids.join(',');
+  fetch(SUPABASE_URL + '/rest/v1/promotions?id=in.(' + idList + ')', {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(() => {
+    document.getElementById('btnDeleteSelected').style.display = 'none';
+    renderList();
+  });
+}
+
+function deleteAllFiltered() {
+  if(currentListRecords.length === 0) { alert('조회된 내역이 없습니다.'); return; }
+  if(!confirm(`조회된 ${currentListRecords.length}건을 전체 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  const ids = currentListRecords.map(r => r.id).join(',');
+  const SUPABASE_URL = 'https://wsktpndhlytjbnunbvxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indza3RwbmRobHl0amJudW5idnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMzEyNjMsImV4cCI6MjA5NzkwNzI2M30.RdQM6ovQMoq70h5r0zY-EqArzXfia-P_mZGcFTQoU_c';
+  fetch(SUPABASE_URL + '/rest/v1/promotions?id=in.(' + ids + ')', {
+    method: 'DELETE',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+  }).then(() => renderList());
 }
 
 function renderList() {
