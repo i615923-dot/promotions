@@ -720,6 +720,11 @@ const BRANCH_PASSWORDS = {
   '남부산': atob('NTU1'), '북부산': atob('NjY2'), '울산': atob('Nzc3'), '대구': atob('ODg4'), '서울': atob('OTk5')
 };
 
+const BRANCH_COST_CENTER = {
+  '창원': '창원지점', '김해': '김해지점', '진주': '진주지점', '한려': '한려지점',
+  '남부산': '남부산지점', '북부산': '북부산지점', '울산': '울산지점', '대구': '대구물류센터', '서울': '서울지점'
+};
+
 function tryLogin() {
   const branch = document.getElementById('loginBranch').value.trim();
   const pw = document.getElementById('loginPw').value;
@@ -1174,7 +1179,7 @@ function renderErp() {
       <td>EA</td>
       <td>${r.qty}</td>
       <td></td>
-      <td></td>
+      <td>${BRANCH_COST_CENTER[currentBranch] || currentBranch}</td>
       <td>${[r.manager, r.note].filter(Boolean).join(' / ')}</td>
     </tr>`).join('');
   }).catch(err => {
@@ -1184,7 +1189,7 @@ function renderErp() {
 
 function copyErpData() {
   if(erpCache.length === 0) { alert('복사할 데이터가 없습니다.'); return; }
-  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', '', [r.manager, r.note].filter(Boolean).join(' / ')].join('\t'));
+  const rows = erpCache.map(r => [r.product_name, r.product_code, '', 'EA', r.qty, r.out_type, '판촉', 'EA', r.qty, '', BRANCH_COST_CENTER[currentBranch] || currentBranch, [r.manager, r.note].filter(Boolean).join(' / ')].join('\t'));
   navigator.clipboard.writeText(rows.join('\n')).then(() => {
     alert(`${erpCache.length}건 복사 완료!\nERP 엑셀에 붙여넣기(Ctrl+V) 하세요.`);
   }).catch(() => {
